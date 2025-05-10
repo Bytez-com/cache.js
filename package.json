@@ -1,0 +1,15 @@
+{
+  "name": "cache.js",
+  "packageManager": "yarn@4.6.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "version": "1.0.0",
+  "dependencies": {
+    "functional-red-black-tree": "^1.0.1"
+  },
+  "devDependencies": {
+    "inquirer": "12.6.1",
+    "semver": "^7.7.1"
+  }
+}
