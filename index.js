@@ -5,7 +5,7 @@ export class Cache {
     ttl = Infinity,
     maxItems = Infinity,
     maxMemoryInMb = Infinity
-  }) {
+  } = {}) {
     // default ttl
     this.#ttl = ttl;
     // max number of items

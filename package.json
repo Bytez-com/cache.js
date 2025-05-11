@@ -1,7 +1,7 @@
 {
   "name": "@nawar/cache",
   "packageManager": "yarn@4.6.0",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "dependencies": {
     "functional-red-black-tree": "^1.0.1"
   },
