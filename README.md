@@ -91,22 +91,22 @@ Under the hood, we measure the size of every `value` you `set`, and we `prune` w
     this.delete(key);
 
     const size = Cache.measureSize(value);
-    const expiresAt = ttl === Infinity ? undefined : Date.now() + ttl;
+    const expiresAt = Date.now() + ttl;
 
     this.#data.set(key, { size, value, expiresAt });
     this.#memory.current += size;
 
     if (
-      // if we're above the max memory allowed, prune
-      this.#memory.max < this.#memory.current ||
-      // or if we're above the max items allowed, prune
-      this.#maxItems < this.#data.size
+      // if we're above the max items allowed, or
+      this.#maxItems < this.#data.size ||
+      // if we're above the max memory allowed, then prune
+      this.#memory.max < this.#memory.current
     ) {
       setImmediate(() => this.#prune());
     }
 
-    if (ttl !== Infinity) {
-      // add the ttl to the timer
+    if (expiresAt !== Infinity) {
+      // add the ttl to the timer, as a background job
       setImmediate(() => this.#addTTL(key, expiresAt));
     }
   }

@@ -33,6 +33,9 @@ export class Cache {
     timestamp: Infinity
   };
 
+  // only one prune at a time allowed
+  #noPruneScheduled = true;
+
   set(key, value, ttl = this.#ttl) {
     this.delete(key);
 
@@ -43,11 +46,14 @@ export class Cache {
     this.#memory.current += size;
 
     if (
-      // if we're above the max memory allowed, prune
-      this.#memory.max < this.#memory.current ||
-      // or if we're above the max items allowed, prune
-      this.#maxItems < this.#data.size
+      this.#noPruneScheduled &&
+      (this.#maxItems < this.#data.size ||
+        // if we're above the max items allowed, or
+        this.#memory.max < this.#memory.current)
+      // if we're above the max memory allowed, then prune
     ) {
+      this.#noPruneScheduled = false;
+
       setImmediate(() => this.#prune());
     }
 
@@ -116,25 +122,21 @@ export class Cache {
   // memory management
   // Prune the cache to fit within the max memory limit
   #prune() {
-    if (
-      // if above the max items allowed, or
-      this.#maxItems < this.#data.size ||
-      // if above the max memory allowed
-      this.#memory.max < this.#memory.current
-    ) {
-      // keep deleting the least recently used items
-      for (const key of this.#data.keys()) {
-        // stop deleting if we're under the max limits
-        if (
-          this.#data.size < this.#maxItems &&
-          this.#memory.current < this.#memory.max
-        ) {
-          break;
-        }
+    // allow a prune to occur during the next event loop cycle
+    this.#noPruneScheduled = true;
 
-        this.#memory.current -= this.#data.get(key).size;
-        this.#data.delete(key);
+    // keep deleting the least recently used items
+    for (const key of this.#data.keys()) {
+      // stop deleting if we're under the max limits
+      if (
+        this.#data.size < this.#maxItems &&
+        this.#memory.current < this.#memory.max
+      ) {
+        break;
       }
+
+      this.#memory.current -= this.#data.get(key).size;
+      this.#data.delete(key);
     }
   }
   // TTL management

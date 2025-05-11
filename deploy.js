@@ -27,8 +27,6 @@ const [answers, packageJson] = await Promise.all([
   readFile(packageJsonPath).then(JSON.parse)
 ]);
 
-await runCommand("npm run build");
-
 // Increment the version
 const newVersion = semver.inc(packageJson.version, answers.versionType);
 
