@@ -37,7 +37,7 @@ export class Cache {
     this.delete(key);
 
     const size = Cache.measureSize(value);
-    const expiresAt = ttl === Infinity ? undefined : Date.now() + ttl;
+    const expiresAt = Date.now() + ttl;
 
     this.#data.set(key, { size, value, expiresAt });
     this.#memory.current += size;
@@ -51,8 +51,8 @@ export class Cache {
       setImmediate(() => this.#prune());
     }
 
-    if (ttl !== Infinity) {
-      // add the ttl to the timer
+    if (expiresAt !== Infinity) {
+      // add the ttl to the timer, as a background job
       setImmediate(() => this.#addTTL(key, expiresAt));
     }
   }
@@ -60,8 +60,10 @@ export class Cache {
     const cache = this.#data.get(key);
 
     if (cache !== undefined && Date.now() < cache.expiresAt) {
-      // To mark this as most recently used, we re-insert it into the map.
-      // This moves it to the end of the map's iteration order.
+      // A LRU cache requires an ordered data structure.
+      // Meanwhile, Map's have "insertion ordering" built-in.
+      // To mark this key as recently used, we'll delete and re-insert it.
+      // This move the key to the end of the map, with an O(1) complexity.
       this.#data.delete(key);
       this.#data.set(key, cache);
 
@@ -120,21 +122,18 @@ export class Cache {
       // if above the max memory allowed
       this.#memory.max < this.#memory.current
     ) {
-      if (this.now) {
-        console.time("prune");
-      }
+      // keep deleting the least recently used items
       for (const key of this.#data.keys()) {
+        // stop deleting if we're under the max limits
         if (
-          this.#data.size < this.#maxItems ||
+          this.#data.size < this.#maxItems &&
           this.#memory.current < this.#memory.max
         ) {
           break;
         }
 
-        this.delete(key);
-      }
-      if (this.now) {
-        console.timeEnd("prune");
+        this.#memory.current -= this.#data.get(key).size;
+        this.#data.delete(key);
       }
     }
   }
@@ -151,34 +150,45 @@ export class Cache {
 
     keysExpiring.add(key);
 
-    // (re)-schedule if this is the new earliest expiry
+    // If this new TTL is less than the current timer
     if (expiresAt < this.#timeout.timestamp) {
+      // then set this this TTL as the new timer
       this.#scheduleNextTimer();
     }
   }
   #scheduleNextTimer() {
-    clearTimeout(this.#timeout.id);
+    if (this.#timeout.id !== undefined) {
+      clearTimeout(this.#timeout.id);
+    }
 
-    // this.#timeout.tree.begin.key === smallestTimestamp
+    // this.#timeout.tree.begin.key is the smallest timestamp in our tree
     this.#timeout.timestamp = this.#timeout.tree.begin.key || Infinity;
 
     if (this.#timeout.timestamp !== Infinity) {
       this.#timeout.id = setTimeout(
-        () => this.#onExpire(),
+        () => this.#onKeyExpired(),
         Math.max(this.#timeout.timestamp - Date.now(), 0)
       );
     }
   }
-  #onExpire() {
+  #onKeyExpired() {
     this.#timeout.id = undefined;
 
-    const now = Date.now();
-
-    // while the smallest timestamp is less than now, delete the keys
-    while (this.#timeout.tree.begin.key <= now) {
-      // for each key in the expiring keys, delete
-      for (const key of this.#timeout.tree.begin.value) {
-        const cache = this.#data.get(key);
+    // loop over smallest expiring timestamps, deleting expired keys
+    for (
+      let key,
+        cache,
+        now = Date.now(),
+        // keysToExpire is the Set of keys expiring at the smallest timestamp
+        keysToExpire = this.#timeout.tree.begin.value;
+      // if our smallest timestamp is less than `now`, its expired
+      this.#timeout.tree.begin.key <= now;
+      // set keysToExpire to the next Set of expiring key
+      keysToExpire = this.#timeout.tree.begin.value
+    ) {
+      // delete each key in the expiring set of keys
+      for (key of keysToExpire) {
+        cache = this.#data.get(key);
 
         if (cache !== undefined) {
           this.#data.delete(key);
@@ -186,13 +196,12 @@ export class Cache {
         }
       }
 
-      // delete this timestamp; set tree to the next smallest ts
+      // delete the smallest timestamp; and set tree to the next smallest timestamp
       this.#timeout.tree = this.#timeout.tree.begin.remove();
     }
 
-    this.#timeout.timestamp = this.#timeout.tree.begin.key || Infinity;
-
-    if (this.#timeout.timestamp !== Infinity) {
+    // if we have another key that needs to expire, then schedule the timer
+    if (this.#timeout.tree.begin.valid) {
       this.#scheduleNextTimer();
     }
   }

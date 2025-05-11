@@ -11,15 +11,15 @@ This cache is fast, uses minimal memory/cpu, and is built for both high volume t
 ## Installation
 
 ```bash
-npm i @bytez-com/cache.js
+npm i @nawar/cache
 # or
-pnpm add @bytez-com/cache.js
+pnpm add @nawar/cache
 ```
 
 ### API
 
 ```js
-import Cache from "@bytez-com/cache.js";
+import Cache from "@nawar/cache";
 
 const cache = new Cache({
   ttl: 60e3, // optionally set a default ttl for cache entries (defaults to infinity)
