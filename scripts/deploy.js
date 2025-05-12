@@ -27,6 +27,7 @@ const [answers, packageJson] = await Promise.all([
   readFile(packageJsonPath).then(JSON.parse)
 ]);
 
+await runCommand("npx pkgroll");
 // Increment the version
 const newVersion = semver.inc(packageJson.version, answers.versionType);
 

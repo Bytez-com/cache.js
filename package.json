@@ -1,15 +1,41 @@
 {
   "name": "@nawar/cache",
   "packageManager": "yarn@4.6.0",
-  "version": "1.0.3",
+  "version": "1.0.4",
+  "type": "module",
+  "scripts": {
+    "deploy": "node scripts/deploy.js",
+    "build": "pkgroll",
+    "dev": "tsx src/index.ts",
+    "test": "tsx ./scripts/test.ts",
+    "lint": "eslint ./src/*.ts",
+    "update": "yarn upgrade-interactive"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    "require": {
+      "types": "./dist/index.d.cts",
+      "default": "./dist/index.cjs"
+    },
+    "import": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
   "dependencies": {
+    "@types/functional-red-black-tree": "^1.0.6",
     "functional-red-black-tree": "^1.0.1"
   },
-  "scripts": {
-    "deploy": "node deploy.js"
-  },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/parser": "^8.32.0",
+    "eslint": "^9.26.0",
     "inquirer": "^12.6.1",
-    "semver": "^7.7.1"
+    "pkgroll": "^2.12.2",
+    "semver": "^7.7.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
   }
 }
